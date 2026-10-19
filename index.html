@@ -1,0 +1,2644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基于三智能体协同-博弈的财务舞弊风险预警系统</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   CSS Variables
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-card-hover: #263548;
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --accent-dark: #2563eb;
+  --success: #22c55e;
+  --success-bg: rgba(34,197,94,0.12);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245,158,11,0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239,68,68,0.12);
+  --orange: #f97316;
+  --orange-bg: rgba(249,115,22,0.12);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #334155;
+  --border-light: #475569;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Reset & Base
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: var(--accent-light); text-decoration: none; }
+a:hover { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Navigation
+   ═══════════════════════════════════════════════════════════════ */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(15,23,42,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.navbar .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.navbar .logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+}
+.navbar .logo-text h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.navbar .logo-text p {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+.navbar .status-dot {
+  width: 8px; height: 8px;
+  background: var(--success);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Hero / Search
+   ═══════════════════════════════════════════════════════════════ */
+.hero {
+  padding: 60px 24px 40px;
+  text-align: center;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 50%, rgba(59,130,246,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+.hero h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero .subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 36px;
+}
+
+.search-container {
+  max-width: 680px;
+  margin: 0 auto;
+  position: relative;
+}
+.search-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+.search-box {
+  flex: 1;
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  height: 52px;
+  padding: 0 48px 0 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: var(--transition);
+}
+.search-box input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.search-box input::placeholder {
+  color: var(--text-muted);
+}
+.search-box .search-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.year-select {
+  width: 140px;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.year-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.year-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-analyze {
+  height: 52px;
+  padding: 0 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-analyze:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+}
+.btn-analyze:active { transform: translateY(0); }
+.btn-analyze:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Search Dropdown */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 50;
+  display: none;
+}
+.search-dropdown.active { display: block; }
+.search-dropdown .dd-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(51,65,85,0.5);
+}
+.search-dropdown .dd-item:last-child { border-bottom: none; }
+.search-dropdown .dd-item:hover { background: var(--bg-card-hover); }
+.search-dropdown .dd-item .code {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-light);
+  min-width: 70px;
+}
+.search-dropdown .dd-item .name {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+}
+.search-dropdown .dd-item .industry {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.search-dropdown .dd-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Main Content
+   ═══════════════════════════════════════════════════════════════ */
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+/* Section */
+.section {
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.section-header .icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Cards
+   ═══════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: var(--transition);
+}
+.card:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow);
+}
+
+/* Company Info Header */
+.company-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+.company-header .info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.company-header .company-name {
+  font-size: 22px;
+  font-weight: 700;
+}
+.company-header .company-code {
+  font-size: 14px;
+  color: var(--accent-light);
+  font-weight: 600;
+}
+.company-header .meta-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.company-header .tag {
+  padding: 4px 12px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--accent-light);
+}
+
+/* Metric Grid */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.metric-card:hover::before { opacity: 1; }
+.metric-card:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.metric-card .label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metric-card .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+.metric-card .value.na {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Category Metric Tabs */
+.cat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.cat-tab {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+  white-space: nowrap;
+}
+.cat-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.05);
+}
+.cat-tab.active {
+  color: var(--text-primary);
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}
+.cat-metric-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  animation: fadeIn 0.3s ease;
+}
+.cat-metric-grid.active { display: grid; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Workpaper Overview
+   ═══════════════════════════════════════════════════════════════ */
+.wp-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.wp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.wp-card.wp-card-col-2 { grid-column: span 2; }
+.wp-card.wp-card-col-3 { grid-column: span 3; }
+.wp-card.wp-card-col-4 { grid-column: span 4; }
+.wp-card h4 {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+/* ML Score Display */
+.ml-score-display {
+  text-align: center;
+  padding: 24px;
+}
+.ml-score-display .score-value {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.ml-score-display .score-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+.ml-score-display .risk-badge {
+  display: inline-block;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Rule Stats */
+.rule-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.rule-stats .big-num {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent-light);
+}
+.rule-stats .big-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.weight-bars {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.weight-bar-item {
+  flex: 1;
+  text-align: center;
+}
+.weight-bar-item .bar {
+  height: 6px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+.weight-bar-item .count {
+  font-size: 14px;
+  font-weight: 600;
+}
+.weight-bar-item .lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Category Tags */
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(30,41,59,0.6);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.category-item .cat-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.category-item .cat-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Fraud Triangle */
+.triangle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.triangle-item {
+  text-align: center;
+  padding: 10px 8px;
+  background: rgba(30,41,59,0.6);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.triangle-item .t-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.triangle-item .t-level {
+  font-size: 15px;
+  font-weight: 700;
+}
+.triangle-item .t-signals {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.triangle-item .t-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin: 2px 0 4px;
+  line-height: 1.3;
+  font-style: italic;
+}
+.triangle-item .t-signal-item {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 1px 0;
+  margin: 1px 0;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.triangle-item.level-high { border-color: var(--danger); background: rgba(239,68,68,0.08); }
+.triangle-item.level-medium { border-color: var(--warning); background: rgba(245,158,11,0.08); }
+.triangle-item.level-low { border-color: var(--success); background: rgba(34,197,94,0.05); }
+.triangle-theory-note {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  background: rgba(30,41,59,0.6);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+/* Category hit highlight */
+.category-item.hit {
+  border-color: rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.06);
+}
+.category-item.hit .cat-count {
+  color: var(--danger);
+  font-weight: 600;
+}
+.category-item.hit .cat-name {
+  color: var(--text-primary);
+}
+.category-item.no-hit { opacity: 0.6; }
+.category-item.no-hit .cat-count {
+  color: var(--text-muted);
+}
+
+.compact-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.hit-rule-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; }
+.hit-rule-detail {
+  padding:12px 14px; border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-sm);
+  background:rgba(239,68,68,0.06);
+}
+.hit-rule-header { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+.hit-rule-id { color:var(--danger); font-size:12px; font-weight:700; white-space:nowrap; }
+.hit-rule-name { color:var(--text-primary); font-size:13px; font-weight:600; }
+.hit-rule-condition { color:var(--text-secondary); font-size:12px; line-height:1.6; margin-top:4px; }
+.hit-rule-condition strong { color:var(--text-primary); font-weight:600; }
+.overview-note { color:var(--text-muted); font-size:12px; line-height:1.6; margin-top:10px; }
+.governance-flags { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.governance-flags span {
+  padding:5px 9px; border-radius:999px; font-size:12px;
+  background:var(--warning-bg); color:var(--warning); border:1px solid rgba(245,158,11,0.2);
+}
+.benchmark-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:12px; }
+.benchmark-item { padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:rgba(15,23,42,0.35); }
+.benchmark-item .label { color:var(--text-secondary); font-size:12px; }
+.benchmark-item .value { color:var(--text-primary); font-weight:600; font-size:13px; margin-top:4px; }
+.ml-overview {
+  display:grid; grid-template-columns:minmax(240px, 0.9fr) minmax(0, 2.1fr); gap:16px;
+}
+.ml-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+.ml-score-display { padding:12px 8px; }
+.ml-feature-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+.ml-feature-item { display:grid; grid-template-columns:minmax(150px, 1.2fr) 2fr auto; align-items:center; gap:10px; font-size:12px; }
+.ml-feature-name { color:var(--text-secondary); }
+.ml-feature-track { height:8px; background:var(--bg-primary); border-radius:8px; overflow:hidden; }
+.ml-feature-bar { height:100%; border-radius:8px; }
+.ml-feature-bar.positive { background:var(--danger); }
+.ml-feature-bar.negative { background:var(--success); }
+.ml-feature-value { color:var(--text-primary); min-width:70px; text-align:right; }
+.ml-unavailable { padding:18px; border:1px dashed var(--border-light); border-radius:var(--radius); background:var(--bg-card); color:var(--text-secondary); }
+.rule-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.rule-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.rule-table th,
+.rule-table td {
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(51,65,85,0.7);
+  color: var(--text-secondary);
+}
+.rule-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  background: rgba(15,23,42,0.45);
+  white-space: nowrap;
+}
+.rule-table tr:last-child td { border-bottom: none; }
+.rule-table tr.rule-hit td { color: var(--text-primary); }
+.rule-table tr.rule-hit td:nth-child(4) { color: var(--danger); font-weight: 700; }
+.rule-facts summary {
+  color: var(--accent-light);
+  cursor: pointer;
+}
+.rule-facts pre {
+  max-width: 360px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Progress / Steps Animation
+   ═══════════════════════════════════════════════════════════════ */
+.progress-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 32px;
+  display: none;
+}
+.progress-panel.active { display: block; }
+.progress-panel h3 {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 28px;
+  color: var(--text-secondary);
+}
+.steps {
+  max-width: 500px;
+  margin: 0 auto;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  opacity: 0.4;
+  transition: var(--transition);
+}
+.step-item:last-child { border-bottom: none; }
+.step-item.active { opacity: 1; }
+.step-item.done { opacity: 0.7; }
+.step-item .step-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+.step-item.active .step-icon {
+  background: var(--accent);
+  color: #fff;
+  animation: step-pulse 1.5s infinite;
+}
+.step-item.done .step-icon {
+  background: var(--success);
+  color: #fff;
+}
+@keyframes step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+}
+.step-item .step-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.step-item.active .step-text { color: var(--text-primary); font-weight: 500; }
+.step-item.done .step-text { color: var(--success); }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(59,130,246,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   Tabs
+   ═══════════════════════════════════════════════════════════════ */
+.tabs-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tabs-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs-nav::-webkit-scrollbar { height: 0; }
+.tab-btn {
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(59,130,246,0.05);
+}
+.tab-btn.active {
+  color: var(--accent-light);
+  border-bottom-color: var(--accent);
+  background: rgba(59,130,246,0.08);
+}
+.tab-content {
+  padding: 16px;
+  display: none;
+}
+.tab-content.active { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Risk Level Badges
+   ═══════════════════════════════════════════════════════════════ */
+.risk-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.risk-low { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+.risk-medium { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.risk-medium-high { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
+.risk-high { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+
+.risk-big {
+  display: inline-block;
+  padding: 10px 32px;
+  border-radius: 24px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+/* Strength badges */
+.strength-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.strength-weak { background: var(--danger-bg); color: var(--danger); }
+.strength-mid { background: var(--warning-bg); color: var(--warning); }
+.strength-strong { background: var(--success-bg); color: var(--success); }
+.strength-none { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+
+/* Priority badges */
+.priority-high { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+.priority-medium { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.priority-low { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Accusation / Defense / Verdict Cards
+   ═══════════════════════════════════════════════════════════════ */
+.result-card {
+  background: rgba(30,41,59,0.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: var(--transition);
+}
+.result-card:hover {
+  border-color: var(--border-light);
+}
+.result-card .rc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.result-card .rc-id {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-light);
+  background: rgba(59,130,246,0.1);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.result-card .rc-title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+.result-card .rc-body {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.result-card .rc-body p {
+  margin-bottom: 8px;
+}
+.result-card .rc-body p:last-child { margin-bottom: 0; }
+.result-card .rc-body .field-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-right: 6px;
+}
+.result-card .rc-body .evidence-tag {
+  display: inline-block;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.15);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--accent-light);
+  margin: 2px 4px 2px 0;
+}
+
+/* Defense reasons */
+.defense-reason {
+  background: rgba(30,41,59,0.4);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.defense-reason .dr-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin-bottom: 4px;
+}
+.defense-reason .dr-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.defense-reason .dr-evidence {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+.defense-reason .dr-evidence.has-ev { color: var(--success); }
+.defense-reason .dr-evidence.no-ev { color: var(--warning); }
+
+/* Verdict items */
+.verdict-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.verdict-item.confirmed { background: var(--success-bg); border-color: rgba(34,197,94,0.2); }
+.verdict-item.rejected { background: var(--danger-bg); border-color: rgba(239,68,68,0.2); }
+.verdict-item.watchlist { background: var(--warning-bg); border-color: rgba(245,158,11,0.2); }
+.verdict-item .vi-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.verdict-item .vi-content { flex: 1; }
+.verdict-item .vi-type {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.verdict-item .vi-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.verdict-item .vi-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Evidence chain */
+.evidence-chain-item {
+  padding: 14px;
+  margin-bottom: 10px;
+  background: rgba(30,41,59,0.4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.evidence-chain-item .ec-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.evidence-chain-item .ec-summary {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.evidence-chain-item .ec-rules {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Summary text */
+.summary-text {
+  padding: 14px;
+  background: rgba(59,130,246,0.05);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+/* Investment advice */
+.advice-section {
+  padding: 14px;
+  margin-bottom: 10px;
+  background: rgba(30,41,59,0.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.advice-section h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.advice-section ul {
+  list-style: none;
+  padding: 0;
+}
+.advice-section ul li {
+  padding: 8px 0;
+  padding-left: 20px;
+  position: relative;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  border-bottom: 1px solid rgba(51,65,85,0.3);
+}
+.advice-section ul li:last-child { border-bottom: none; }
+.advice-section ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Overall risk summary */
+.overall-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.overall-risk-item {
+  text-align: center;
+  padding: 14px;
+  background: rgba(30,41,59,0.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.overall-risk-item .or-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.overall-risk-item .or-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Toast
+   ═══════════════════════════════════════════════════════════════ */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toast {
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  color: var(--text-primary);
+  max-width: 400px;
+  animation: toast-in 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.toast.toast-error { border-left: 4px solid var(--danger); }
+.toast.toast-success { border-left: 4px solid var(--success); }
+.toast.toast-info { border-left: 4px solid var(--accent); }
+.toast.toast-out { animation: toast-out 0.3s ease forwards; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toast-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   Skeleton
+   ═══════════════════════════════════════════════════════════════ */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, rgba(51,65,85,0.5) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skeleton-text { height: 14px; margin-bottom: 8px; }
+.skeleton-text.w-60 { width: 60%; }
+.skeleton-text.w-80 { width: 80%; }
+.skeleton-text.w-40 { width: 40%; }
+.skeleton-card {
+  height: 80px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .hero h2 { font-size: 22px; }
+  .search-row { flex-direction: column; }
+  .year-select { width: 100%; }
+  .btn-analyze { width: 100%; justify-content: center; }
+  .company-header { flex-direction: column; align-items: flex-start; }
+  .metric-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .wp-overview { grid-template-columns: 1fr; }
+  .wp-overview .wp-card-col-2,
+  .wp-overview .wp-card-col-3,
+  .wp-overview .wp-card-col-4 { grid-column: span 1; }
+  .ml-overview { grid-template-columns: 1fr; }
+  .ml-feature-item { grid-template-columns:minmax(120px, 1fr) 1.3fr auto; }
+  .triangle-grid { grid-template-columns: 1fr; }
+  .overall-risk-grid { grid-template-columns: 1fr 1fr; }
+  .tabs-nav { gap: 0; }
+  .tab-btn { padding: 12px 14px; font-size: 13px; }
+  .tab-content { padding: 16px; }
+  .risk-big { font-size: 18px; padding: 8px 20px; }
+  .ml-score-display .score-value { font-size: 36px; }
+}
+
+@media (max-width: 480px) {
+  .navbar { padding: 0 12px; }
+  .navbar .logo { gap: 8px; min-width: 0; flex: 1; }
+  .navbar .logo-text { min-width: 0; }
+  .navbar .logo-text h1 { font-size: 12px; line-height: 1.25; max-width: calc(100vw - 150px); }
+  .navbar .logo-text p { display: none; }
+  .navbar > div:last-child { font-size: 11px !important; gap: 4px !important; white-space: nowrap; }
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .overall-risk-grid { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Utility
+   ═══════════════════════════════════════════════════════════════ */
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
+.text-orange { color: var(--orange); }
+.text-muted { color: var(--text-muted); }
+.text-accent { color: var(--accent-light); }
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 12px; }
+.mt-2 { margin-top: 8px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.fw-bold { font-weight: 700; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.hidden { display: none !important; }
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+}
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+.empty-state p {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: relative;
+  min-height: 100px;
+}
+.loading-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15,23,42,0.6);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Navigation
+     ═══════════════════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <div class="logo">
+    <div class="logo-icon">预</div>
+    <div class="logo-text">
+      <h1>基于三智能体协同-博弈的财务舞弊风险预警系统</h1>
+      <p>指控、辩护与裁决协同分析，机器学习结果独立参考</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);">
+    <span class="status-dot"></span>
+    <span id="apiStatus">服务就绪</span>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Hero / Search
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <h2>选择公司及年度，生成财务舞弊风险预警</h2>
+  <div class="subtitle">结合专家规则、机器学习参考与指控—辩护—裁决三智能体协同分析</div>
+  <div class="search-container">
+    <div class="search-row">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="输入股票代码或公司名称，如 000651 或 格力电器" autocomplete="off">
+        <span class="search-icon">&#128269;</span>
+        <div class="search-dropdown" id="searchDropdown"></div>
+      </div>
+      <select class="year-select" id="yearSelect">
+        <option value="">选择年份</option>
+      </select>
+      <button class="btn-analyze" id="btnAnalyze" disabled>
+        <span>&#9654;</span> 开始分析
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Main Content
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="main-content">
+
+  <!-- Empty State (default) -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">&#128202;</div>
+    <p>请搜索并选择一只股票开始分析</p>
+    <p class="text-sm">支持输入股票代码或公司名称进行搜索</p>
+  </div>
+
+  <!-- Progress Panel -->
+  <div class="progress-panel" id="progressPanel">
+    <h3>分析进行中</h3>
+    <div class="steps">
+      <div class="step-item" id="step1">
+        <div class="step-icon">1</div>
+        <div class="step-text">加载公司资料、关键指标与规则结果...</div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-icon">2</div>
+        <div class="step-text">指控、辩护、裁决依次分析中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Company Overview -->
+  <div class="section" id="sectionBasicInfo" style="display:none;">
+    <div class="section-header">
+      <div class="icon">&#127970;</div>
+      <h3>公司概览与关键指标</h3>
+    </div>
+    <div id="companyHeader"></div>
+    <div class="wp-overview" id="wpOverview"></div>
+  </div>
+
+  <!-- Section: Independent ML Reference -->
+  <div class="section" id="sectionML" style="display:none;">
+    <div class="section-header">
+      <div class="icon">&#128200;</div>
+      <h3>机器学习模型参考结果</h3>
+    </div>
+    <div id="mlOverview"></div>
+  </div>
+
+  <!-- Section: Three-Agent Analysis -->
+  <div class="section" id="sectionAnalysis" style="display:none;">
+    <div class="section-header">
+      <div class="icon">&#129302;</div>
+      <h3>三智能体协同分析结果</h3>
+    </div>
+    <div class="tabs-container">
+      <div class="tabs-nav" id="tabsNav">
+        <button class="tab-btn active" data-tab="tabProsecution">&#9878;&#65039; 指控智能体</button>
+        <button class="tab-btn" data-tab="tabDefense">&#128737;&#65039; 辩护智能体</button>
+        <button class="tab-btn" data-tab="tabVerdict">&#127942; 裁决智能体</button>
+      </div>
+
+      <!-- Tab: Prosecution -->
+      <div class="tab-content active" id="tabProsecution"></div>
+
+      <!-- Tab: Defense -->
+      <div class="tab-content" id="tabDefense"></div>
+
+      <!-- Tab: Verdict -->
+      <div class="tab-content" id="tabVerdict"></div>
+    </div>
+  </div>
+
+  <!-- Section: Overall Conclusion -->
+  <div class="section" id="sectionConclusion" style="display:none;">
+    <div class="section-header">
+      <div class="icon">&#128202;</div>
+      <h3>总体结论</h3>
+    </div>
+    <div class="tabs-container">
+      <div class="tabs-nav" id="tabsNavConclusion">
+        <button class="tab-btn active" data-tab="tabOverall">&#128202; 总体风险</button>
+        <button class="tab-btn" data-tab="tabAdvice">&#128203; 核查建议</button>
+      </div>
+
+      <!-- Tab: Overall Risk -->
+      <div class="tab-content active" id="tabOverall"></div>
+
+      <!-- Tab: Investment Advice -->
+      <div class="tab-content" id="tabAdvice"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JavaScript
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ── State ──
+  const state = {
+    selectedCode: '',
+    selectedName: '',
+    selectedIndustry: '',
+    basicInfo: null,
+    workpaper: null,
+    mlResult: null,
+    analysisResult: null,
+    searchTimer: null,
+  };
+
+  // ── DOM refs ──
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  const searchInput = $('#searchInput');
+  const searchDropdown = $('#searchDropdown');
+  const yearSelect = $('#yearSelect');
+  const btnAnalyze = $('#btnAnalyze');
+  const emptyState = $('#emptyState');
+  const progressPanel = $('#progressPanel');
+
+  // ── API Base ──
+  const API = window.location.protocol === 'file:' ? 'http://localhost:5001' : '';
+
+  // ── Toast ──
+  function showToast(msg, type) {
+    type = type || 'info';
+    const container = $('#toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(function() {
+      toast.classList.add('toast-out');
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 4000);
+  }
+
+  // ── Helpers ──
+  function fmtVal(v, unit) {
+    if (v === null || v === undefined || v === 'N/A' || (typeof v === 'number' && isNaN(v))) return '<span class="na">暂无数据</span>';
+    if (typeof v === 'number') {
+      if (Math.abs(v) >= 100) return v.toFixed(2) + (unit || '');
+      if (Math.abs(v) >= 1) return v.toFixed(2) + (unit || '');
+      return v.toFixed(4) + (unit || '');
+    }
+    return escHTML(v + (unit || ''));
+  }
+
+  function riskLevelClass(level) {
+    var text = chineseRiskLevel(level);
+    if (!text) return '';
+    if (text === '低风险' || text === '低') return 'risk-low';
+    if (text === '中风险' || text === '中') return 'risk-medium';
+    if (text === '中高风险') return 'risk-medium-high';
+    if (text === '高风险' || text === '高') return 'risk-high';
+    return '';
+  }
+
+  function chineseRiskLevel(level) {
+    var value = String(level || '').trim();
+    var map = { high: '高风险', 'high risk': '高风险', medium: '中风险', 'medium risk': '中风险', low: '低风险', 'low risk': '低风险' };
+    return map[value.toLowerCase()] || value;
+  }
+
+  function chineseEnum(value) {
+    if (value === null || value === undefined) return '暂无数据';
+    var text = String(value).trim();
+    var map = {
+      'n/a': '暂无数据', none: '暂无数据', unknown: '暂不明确',
+      high: '高', medium: '中', low: '低', strong: '强', weak: '弱', moderate: '中等',
+      normal: '正常', watch: '关注', data_insufficient: '数据不足', calculation_error: '计算异常',
+      available: '可用', unavailable: '不可用', true: '是', false: '否',
+      'strong defense': '强辩护', 'moderate defense': '中等辩护', 'medium defense': '中等辩护',
+      'weak defense': '弱辩护', 'no valid defense': '无有效辩护',
+      'industry rationality': '行业合理性', 'business model rationality': '业务模式合理性',
+      'operating cycle rationality': '经营周期合理性', 'data quality and materiality': '数据质量与重要性',
+      'contrary evidence': '反向证据', 'maintain original risk': '维持原风险',
+      'slightly downgrade': '轻微下调', 'downgrade one level': '下调一个等级',
+      'reject the accusation': '驳回该指控', 'reject this accusation': '驳回该指控',
+      'risk point': '风险点', 'income fraud': '收入异常', 'inventory anomaly': '存货异常',
+      'funding anomaly': '资金异常', 'fraud risk': '舞弊风险'
+    };
+    return map[text.toLowerCase()] || text;
+  }
+
+  function riskBadgeHTML(level, big) {
+    var cls = riskLevelClass(level);
+    var sizeCls = big ? 'risk-big ' : 'risk-badge ';
+    var label = chineseRiskLevel(level) || '暂无结论';
+    if (label === '高' || label === '中' || label === '低') label += '风险';
+    return '<span class="' + sizeCls + cls + '">' + escHTML(label) + '</span>';
+  }
+
+  function strengthClass(s) {
+    var value = chineseEnum(s);
+    if (!value) return '';
+    if (value === '强' || value === '强辩护') return 'strength-strong';
+    if (value === '中' || value === '中等辩护') return 'strength-mid';
+    if (value === '弱' || value === '弱辩护') return 'strength-weak';
+    return 'strength-none';
+  }
+
+  function strengthBadgeHTML(s) {
+    return '<span class="strength-badge ' + strengthClass(s) + '">' + escHTML(chineseEnum(s)) + '</span>';
+  }
+
+  function priorityClass(p) {
+    var value = chineseEnum(p);
+    if (value === '高') return 'priority-high';
+    if (value === '中') return 'priority-medium';
+    return 'priority-low';
+  }
+
+  function escHTML(str) {
+    if (!str) return '';
+    var text = localizeDisplayText(str);
+    return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function localizeDisplayText(value) {
+    var text = String(value);
+    text = text.replace(/\bSHAP\b/gi, '特征贡献分析')
+      .replace(/\bML\b/gi, '机器学习')
+      .replace(/\bROE\b/gi, '净资产收益率')
+      .replace(/\bOCF\b/gi, '经营活动现金流');
+    return text.replace(/\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b/g, function(token) {
+      if (/^R[1-3]_\d{2}(?:_|$)/.test(token)) return token;
+      var label = labelForMetric(token);
+      return label === '其他财务指标' ? token : label;
+    });
+  }
+
+  function displayValue(value, digits) {
+    if (value === null || value === undefined || value === '' || value === 'N/A') return '暂无数据';
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value.toLocaleString('zh-CN', { maximumFractionDigits: digits === undefined ? 4 : digits });
+    }
+    if (typeof value === 'boolean') return value ? '是' : '否';
+    return chineseEnum(value);
+  }
+
+  function labelForMetric(key) {
+    var labels = {
+      cash: '货币资金', trading_financial_assets: '交易性金融资产', notes_receivable_net: '应收票据',
+      accounts_receivable_net: '应收账款', prepayments_net: '预付款项', inventory_net: '存货',
+      current_assets_total: '流动资产合计', investment_property_net: '投资性房地产',
+      fixed_assets_net: '固定资产', construction_in_progress_net: '在建工程', intangible_assets_net: '无形资产',
+      goodwill_net: '商誉', non_current_assets_total: '非流动资产合计', total_assets: '总资产',
+      short_term_borrowings: '短期借款', notes_payable: '应付票据', accounts_payable: '应付账款',
+      advance_from_customers: '预收款项', employee_benefits_payable: '应付职工薪酬', taxes_fees_payable: '应交税费',
+      interest_payable: '应付利息', dividends_payable: '应付股利', current_liabilities_total: '流动负债合计',
+      long_term_borrowings: '长期借款', long_term_payables: '长期应付款', total_liabilities: '负债合计',
+      paid_in_capital: '实收资本', other_equity_instruments: '其他权益工具', capital_reserve: '资本公积',
+      surplus_reserve: '盈余公积', retained_earnings: '未分配利润', equity_attributable_to_parent: '归属于母公司所有者权益',
+      total_owners_equity: '所有者权益合计', total_liabilities_and_equity: '负债和所有者权益总计',
+      total_operating_revenue: '营业总收入', operating_revenue: '营业收入', net_interest_income: '利息净收入',
+      other_operating_revenue: '其他营业收入', total_operating_cost: '营业总成本', operating_cost: '营业成本',
+      taxes_and_surcharges: '税金及附加', selling_expenses: '销售费用', administrative_expenses: '管理费用',
+      research_development_expenses: '研发费用', finance_expenses: '财务费用', interest_expense: '利息费用',
+      interest_income: '利息收入', other_gains: '其他收益', investment_income: '投资收益', operating_profit: '营业利润',
+      non_operating_revenue: '营业外收入', non_operating_expenses: '营业外支出', total_profit: '利润总额',
+      income_tax_expense: '所得税费用', net_profit: '净利润', cash_received_from_sales: '销售商品、提供劳务收到的现金',
+      operating_cash_inflows: '经营活动现金流入', cash_paid_for_purchases: '购买商品、接受劳务支付的现金',
+      operating_cash_outflows: '经营活动现金流出', operating_cash_flow_net: '经营活动现金流量净额',
+      operating_cash_flow: '经营活动现金流量净额', investing_cash_flow_net: '投资活动现金流量净额', financing_cash_flow_net: '筹资活动现金流量净额',
+      cash_equivalents_increase_net: '现金及现金等价物净增加额', cash_equivalents_beginning: '期初现金及现金等价物',
+      cash_equivalents_ending: '期末现金及现金等价物', gross_profit_margin: '毛利率', selling_expense_ratio: '销售费用率',
+      receivables_turnover_ratio: '应收账款周转率', receivables_turnover_days: '应收账款周转天数',
+      inventory_turnover_ratio: '存货周转率', inventory_turnover_days: '存货周转天数', revenue_growth: '营业收入增速',
+      industry_gross_profit_margin: '行业毛利率', industry_sales_expense: '行业销售费用率',
+      ind_inventory_turnover_avg: '行业存货周转率', interest_liab_ratio: '有息负债率', non_recurring_gain_loss: '非经常性损益',
+      net_profit_deducted_nonrecurring: '扣除非经常性损益后的净利润', weighted_avg_roe: '加权平均净资产收益率',
+      weighted_avg_roe_deducted: '扣非加权平均净资产收益率', basic_eps_deducted: '扣非基本每股收益',
+      operating_cash_flow_per_share: '每股经营活动现金流', bps: '每股净资产', basic_eps: '基本每股收益',
+      diluted_eps: '稀释每股收益', customer_concentration: '客户集中度', supplier_concentration: '供应商集中度',
+      supply_chain_concentration: '供应链集中度', related_party_transaction_amount: '关联交易金额',
+      inventory_growth_yoy: '存货同比增速', cost_of_revenue_growth_yoy: '营业成本同比增速',
+      revenue_growth_yoy: '营业收入同比增速', receivable_growth_yoy: '应收账款同比增速',
+      core_tech_turnover: '关键技术人员变动', audit_non_standard: '非标准审计意见', audit_opinion_risk: '审计意见风险',
+      pledge_high_risk: '控股股东高比例质押', revenue_growth_m: '营业收入增速', receivable_growth_m: '应收账款增速',
+      inventory_growth_m: '存货增速', cost_growth_m: '营业成本增速', gross_margin_m: '毛利率',
+      sales_expense_ratio_m: '销售费用率', sales_expense_drop_m: '销售费用率降幅', net_profit_growth_m: '净利润增速',
+      cash_collection_ratio_m: '销售回款率', ocf_profit_ratio_m: '经营现金流与净利润比值',
+      inventory_to_assets_m: '存货占总资产比例', inventory_turnover_m: '存货周转率', construction_growth_m: '在建工程增速',
+      fixed_assets_growth_m: '固定资产增速', construction_growth_lag_m: '上期在建工程增速', cash_to_assets_m: '货币资金占总资产比例',
+      short_loan_to_liab_m: '短期借款占负债比例', prepayment_to_assets_m: '预付款占总资产比例',
+      prepayment_growth_m: '预付款增速', related_party_to_assets_m: '关联交易占总资产比例',
+      interest_income_to_cash_m: '利息收入与货币资金比值', financing_to_assets_m: '筹资现金流占总资产比例',
+      neg_cfo_3y_m: '连续三年经营现金流为负', receivable_minus_revenue_growth_m: '应收账款与营业收入增速差',
+      inventory_minus_cost_growth_m: '存货与营业成本增速差'
+    };
+    var ruleNames = {
+      R1_01: '应收账款增速显著背离营业收入增速', R1_02: '销售回款率偏低', R1_03: '毛利率显著高于行业水平',
+      R1_04: '净利润增长但经营现金流走弱', R1_05: '营业收入增速显著高于行业水平', R1_06: '收入增长而销售费用率逆势下降',
+      R2_01: '存货增速显著高于营业成本增速', R2_02: '存货周转率显著低于行业水平', R2_03: '存货高企且周转偏弱',
+      R2_04: '存货占总资产比例异常偏高', R2_05: '在建工程长期挂账不转固', R3_01: '存贷双高',
+      R3_02: '往来款或预付款异常占用', R3_03: '经营现金流与利润背离', R3_04: '关联交易金额占比偏高',
+      R3_05: '货币资金与利息收入不匹配', R3_06: '筹资现金流持续流入但业务无明显扩张',
+      R3_07: '经营现金流与净利润背离（行业分位数）', R3_08: '连续三年经营性现金流为负'
+    };
+    var raw = String(key || '').replace(/^raw_/, '');
+    var feature = raw.match(/^(R[1-3]_\d{2})_(hit|severity|distance|available)$/);
+    if (feature) {
+      var suffix = { hit: '规则命中状态', severity: '异常程度', distance: '偏离程度', available: '数据可用状态' }[feature[2]];
+      return (ruleNames[feature[1]] || '规则') + '（' + suffix + '）';
+    }
+    if (ruleNames[raw]) return ruleNames[raw];
+    if (labels[raw]) return labels[raw];
+    if (labels[key]) return labels[key];
+    return /[a-z]/i.test(raw) ? '其他财务指标' : raw;
+  }
+
+  function ruleLabel(ruleId) {
+    var code = String(ruleId || '');
+    if (!/^R[1-3][_-]\d{2}$/i.test(code)) return code;
+    var ruleName = labelForMetric(code.replace(/-/g, '_'));
+    return ruleName === '其他财务指标' ? code : code + '：' + ruleName;
+  }
+
+  function ruleValueText(metric, value) {
+    if (value === null || value === undefined || value === '') return '暂无数据';
+    if (typeof value === 'boolean') return value ? '是' : '否';
+    if (metric === 'neg_cfo_3y_m' || metric === 'neg_cfo_3y') return Number(value) >= 1 ? '是' : '否';
+    if (metric === 'inventory_turnover_m' || metric === 'inventory_turnover') {
+      var turnover = Number(value);
+      return Number.isFinite(turnover) ? turnover.toFixed(2) + ' 次' : displayValue(value, 2);
+    }
+    if (metric === 'net_profit' || metric === 'operating_cash_flow') {
+      var amount = Number(value);
+      return Number.isFinite(amount) ? (amount / 100000000).toFixed(2) + ' 亿元' : displayValue(value, 2);
+    }
+    var ratioMetrics = [
+      'revenue_growth_m', 'receivable_growth_m', 'inventory_growth_m', 'cost_growth_m',
+      'gross_margin_m', 'sales_expense_ratio_m', 'sales_expense_drop_m', 'net_profit_growth_m',
+      'cash_collection_ratio_m', 'ocf_profit_ratio_m', 'inventory_to_assets_m',
+      'construction_growth_m', 'construction_growth_lag_m', 'fixed_assets_growth_m',
+      'cash_to_assets_m', 'short_loan_to_liab_m', 'prepayment_to_assets_m',
+      'prepayment_growth_m', 'related_party_to_assets_m', 'interest_income_to_cash_m',
+      'financing_to_assets_m', 'receivable_minus_revenue_growth_m', 'inventory_minus_cost_growth_m'
+    ];
+    if (ratioMetrics.indexOf(metric) >= 0) {
+      var ratio = Number(value);
+      return Number.isFinite(ratio) ? (ratio * 100).toFixed(2) + '%' : displayValue(value, 4);
+    }
+    return displayValue(value, 4);
+  }
+
+  function ruleThreshold(rule, metric, quantile) {
+    var thresholds = rule.threshold_values || {};
+    var keys = Object.keys(thresholds);
+    for (var i = 0; i < keys.length; i++) {
+      var item = thresholds[keys[i]] || {};
+      if (item.metric === metric && item.quantile === quantile) return item;
+    }
+    return null;
+  }
+
+  function ruleQuantileText(item) {
+    if (!item) return '行业分位数';
+    var level = { subindustry: '细分行业', level1: '上级行业', market: '全市场' }[item.level] || '行业';
+    return level + String(item.quantile || '').toUpperCase();
+  }
+
+  function ruleHitEvidence(rule) {
+    var raw = rule.raw_value || {};
+    var id = String(rule.rule_id || '');
+    var specs = {
+      'R1-01': [{ raw: 'gap', metric: 'receivable_minus_revenue_growth_m', quantile: 'p75', op: '>' }],
+      'R1-02': [
+        { raw: 'cash_collection_ratio', metric: 'cash_collection_ratio_m', quantile: 'p25', op: '<' },
+        { raw: 'revenue_growth', metric: 'revenue_growth_m', quantile: 'p50', op: '>' }
+      ],
+      'R1-03': [{ raw: 'gross_margin', metric: 'gross_margin_m', quantile: 'p90', op: '>' }],
+      'R1-04': [
+        { raw: 'net_profit_growth', metric: 'net_profit_growth_m', quantile: 'p75', op: '>' },
+        { raw: 'ocf_profit_ratio', metric: 'ocf_profit_ratio_m', quantile: 'p25', op: '<' }
+      ],
+      'R1-05': [{ raw: 'revenue_growth', metric: 'revenue_growth_m', quantile: 'p90', op: '>' }],
+      'R1-06': [
+        { raw: 'revenue_growth', metric: 'revenue_growth_m', quantile: 'p75', op: '>' },
+        { raw: 'sales_expense_drop', metric: 'sales_expense_drop_m', quantile: 'p75', op: '>' }
+      ],
+      'R2-01': [{ raw: 'gap', metric: 'inventory_minus_cost_growth_m', quantile: 'p75', op: '>' }],
+      'R2-02': [{ raw: 'inventory_turnover', metric: 'inventory_turnover_m', quantile: 'p25', op: '<' }],
+      'R2-03': [
+        { raw: 'inventory_to_assets', metric: 'inventory_to_assets_m', quantile: 'p75', op: '>' },
+        { raw: 'inventory_turnover', metric: 'inventory_turnover_m', quantile: 'p25', op: '<' }
+      ],
+      'R2-04': [{ raw: 'inventory_to_assets', metric: 'inventory_to_assets_m', quantile: 'p90', op: '>' }],
+      'R2-05': [
+        { raw: 'construction_growth', metric: 'construction_growth_m', quantile: 'p75', op: '>' },
+        { raw: 'construction_growth_lag', metric: 'construction_growth_m', displayMetric: 'construction_growth_lag_m', quantile: 'p75', op: '>' },
+        { raw: 'fixed_assets_growth', metric: 'fixed_assets_growth_m', quantile: 'p25', op: '<' }
+      ],
+      'R3-01': [
+        { raw: 'cash_to_assets', metric: 'cash_to_assets_m', quantile: 'p75', op: '>' },
+        { raw: 'short_loan_to_liab', metric: 'short_loan_to_liab_m', quantile: 'p75', op: '>' }
+      ],
+      'R3-02': [
+        { raw: 'prepayment_to_assets', metric: 'prepayment_to_assets_m', quantile: 'p75', op: '>' },
+        { raw: 'prepayment_growth', metric: 'prepayment_growth_m', quantile: 'p75', op: '>' }
+      ],
+      'R3-03': [
+        { raw: 'net_profit', metric: 'net_profit', fixed: true, op: '>' , threshold: 0},
+        { raw: 'ocf_profit_ratio', metric: 'ocf_profit_ratio_m', quantile: 'p25', op: '<' }
+      ],
+      'R3-04': [{ raw: 'related_party_to_assets', metric: 'related_party_to_assets_m', quantile: 'p90', op: '>' }],
+      'R3-05': [
+        { raw: 'cash_to_assets', metric: 'cash_to_assets_m', quantile: 'p75', op: '>' },
+        { raw: 'interest_income_to_cash', metric: 'interest_income_to_cash_m', quantile: 'p25', op: '<' }
+      ],
+      'R3-06': [
+        { raw: 'financing_to_assets', metric: 'financing_to_assets_m', quantile: 'p75', op: '>' },
+        { raw: 'revenue_growth', metric: 'revenue_growth_m', quantile: 'p25', op: '<' },
+        { raw: 'operating_cash_flow', metric: 'operating_cash_flow', fixed: true, op: '<=', threshold: 0 }
+      ],
+      'R3-07': [
+        { raw: 'net_profit', metric: 'net_profit', fixed: true, op: '>', threshold: 0 },
+        { raw: 'operating_cash_flow', metric: 'operating_cash_flow', fixed: true, op: '<', threshold: 0 },
+        { raw: 'ocf_profit_ratio', metric: 'ocf_profit_ratio_m', quantile: 'p10', op: '<' }
+      ],
+      'R3-08': [{ raw: 'neg_cfo_3y', metric: 'neg_cfo_3y_m', fixed: true, op: '≥', threshold: 1 }]
+    }[id] || [];
+    function conditionLine(spec) {
+      var value = raw[spec.raw];
+      if (value === null || value === undefined || value === '') return null;
+      var thresholdItem = spec.fixed ? null : ruleThreshold(rule, spec.metric, spec.quantile);
+      var threshold = spec.fixed ? spec.threshold : thresholdItem && thresholdItem.value;
+      if (threshold === null || threshold === undefined) return null;
+      var actualNumber = Number(value);
+      var thresholdNumber = Number(threshold);
+      var satisfied = spec.op === '>' ? actualNumber > thresholdNumber : spec.op === '<' ? actualNumber < thresholdNumber : spec.op === '<=' ? actualNumber <= thresholdNumber : actualNumber >= thresholdNumber;
+      if (!satisfied) return null;
+      var displayMetric = spec.displayMetric || spec.metric;
+      var thresholdText = spec.fixed ? ruleValueText(spec.metric, threshold) : ruleValueText(spec.metric, threshold) + '（' + ruleQuantileText(thresholdItem) + '）';
+      return '<span><strong>' + escHTML(labelForMetric(displayMetric)) + '</strong> = ' + escHTML(ruleValueText(displayMetric, value)) + ' ' + escHTML(spec.op) + ' ' + escHTML(thresholdText) + '</span>';
+    }
+    if (id === 'R3-08') {
+      return '<span><strong>连续三年经营活动现金流量净额均为负</strong>：已满足（判定值：是）</span>';
+    }
+    var lines = [];
+    if (id === 'R3-02') {
+      specs.forEach(function(spec) { var line = conditionLine(spec); if (line) lines.push(line); });
+      return lines.length ? lines.join('<br><span class="text-xs text-muted">或</span><br>') : '预付款指标触发行业P75条件。';
+    }
+    if (id === 'R3-07') {
+      var profitCondition = conditionLine(specs[0]);
+      var cashFlowCondition = conditionLine(specs[1]);
+      var ratioCondition = conditionLine(specs[2]);
+      if (profitCondition) lines.push(profitCondition);
+      var alternatives = [cashFlowCondition, ratioCondition].filter(Boolean);
+      if (alternatives.length) lines.push(alternatives.join('<br><span class="text-xs text-muted">或</span><br>'));
+      return lines.length ? lines.join('<br>') : '规则条件已满足。';
+    }
+    specs.forEach(function(spec) { var line = conditionLine(spec); if (line) lines.push(line); });
+    if (!lines.length) return '规则条件已满足，具体指标值见底稿。';
+    return lines.join('<br>');
+  }
+
+  function accusationLabel(id) {
+    var match = String(id || '').match(/^P(\d+)$/i);
+    return match ? '指控线索 ' + match[1] : (id ? String(id) : '风险线索');
+  }
+
+  function showSection(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.style.display = '';
+      setTimeout(function() { el.classList.add('visible'); }, 50);
+    }
+  }
+
+  function setStepState(stepNum, status) {
+    var el = document.getElementById('step' + stepNum);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    if (status === 'active') {
+      el.classList.add('active');
+      var textEl = el.querySelector('.step-text');
+      textEl.innerHTML = textEl.textContent.replace('...', '') + '...<span class="spinner"></span>';
+    } else if (status === 'done') {
+      el.classList.add('done');
+      var iconEl = el.querySelector('.step-icon');
+      iconEl.innerHTML = '&#10003;';
+      var textEl = el.querySelector('.step-text');
+      textEl.innerHTML = textEl.textContent.replace('<span class="spinner"></span>', '') + ' &#10003;';
+    }
+  }
+
+  function resetSteps() {
+    for (var i = 1; i <= 2; i++) {
+      var el = document.getElementById('step' + i);
+      el.classList.remove('active', 'done');
+      el.querySelector('.step-icon').textContent = i;
+      var texts = ['加载公司资料、关键指标与规则结果...', '指控、辩护、裁决依次分析中...'];
+      el.querySelector('.step-text').textContent = texts[i - 1];
+    }
+  }
+
+  // ── Search ──
+  searchInput.addEventListener('input', function() {
+    var q = this.value.trim();
+    clearTimeout(state.searchTimer);
+    if (!q) {
+      searchDropdown.classList.remove('active');
+      searchDropdown.innerHTML = '';
+      return;
+    }
+    state.searchTimer = setTimeout(function() { doSearch(q); }, 300);
+  });
+
+  searchInput.addEventListener('focus', function() {
+    if (searchDropdown.children.length > 0) {
+      searchDropdown.classList.add('active');
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-box')) {
+      searchDropdown.classList.remove('active');
+    }
+  });
+
+  async function doSearch(q) {
+    try {
+      var resp = await fetch(API + '/api/stock/search?q=' + encodeURIComponent(q));
+      if (!resp.ok) throw new Error('搜索失败');
+      var data = await resp.json();
+      renderDropdown(data);
+    } catch (e) {
+      console.error('Search error:', e);
+    }
+  }
+
+  function renderDropdown(items) {
+    searchDropdown.innerHTML = '';
+    if (!items || items.length === 0) {
+      searchDropdown.innerHTML = '<div class="dd-empty">未找到匹配的股票</div>';
+      searchDropdown.classList.add('active');
+      return;
+    }
+    // 按股票代码+公司名称去重
+    var seen = {};
+    var uniqueItems = [];
+    items.forEach(function(item) {
+      var key = item.stock_code + '|' + item.company_name;
+      if (!seen[key]) {
+        seen[key] = true;
+        uniqueItems.push(item);
+      }
+    });
+    uniqueItems.forEach(function(item) {
+      var div = document.createElement('div');
+      div.className = 'dd-item';
+      div.innerHTML =
+        '<span class="code">' + escHTML(item.stock_code) + '</span>' +
+        '<span class="name">' + escHTML(item.company_name) + '</span>' +
+        '<span class="industry">' + escHTML(item.industry_name || '') + '</span>';
+      div.addEventListener('click', function() {
+        selectStock(item);
+      });
+      searchDropdown.appendChild(div);
+    });
+    searchDropdown.classList.add('active');
+  }
+
+  async function selectStock(item) {
+    state.selectedCode = item.stock_code;
+    state.selectedName = item.company_name;
+    state.selectedIndustry = item.industry_name || '';
+    searchInput.value = item.company_name + ' (' + item.stock_code + ')';
+    searchDropdown.classList.remove('active');
+
+    // Load available years
+    yearSelect.innerHTML = '<option value="">加载中...</option>';
+    btnAnalyze.disabled = true;
+    try {
+      var resp = await fetch(API + '/api/stock/info?code=' + item.stock_code);
+      if (!resp.ok) throw new Error('获取年份失败');
+      var data = await resp.json();
+      yearSelect.innerHTML = '<option value="">选择年份</option>';
+      (data.available_years || []).forEach(function(y) {
+        var opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y + ' 年';
+        yearSelect.appendChild(opt);
+      });
+      btnAnalyze.disabled = true;
+    } catch (e) {
+      showToast('获取年份列表失败: ' + e.message, 'error');
+      yearSelect.innerHTML = '<option value="">选择年份</option>';
+    }
+  }
+
+  yearSelect.addEventListener('change', function() {
+    btnAnalyze.disabled = !this.value;
+  });
+
+  // ── Analyze Button ──
+  btnAnalyze.addEventListener('click', function() {
+    if (!state.selectedCode || !yearSelect.value) return;
+    startAnalysis(state.selectedCode, parseInt(yearSelect.value));
+  });
+
+  async function startAnalysis(code, year) {
+    // Reset
+    emptyState.style.display = 'none';
+    $('#sectionBasicInfo').style.display = 'none';
+    $('#sectionBasicInfo').classList.remove('visible');
+    $('#sectionML').style.display = 'none';
+    $('#sectionML').classList.remove('visible');
+    $('#sectionAnalysis').style.display = 'none';
+    $('#sectionAnalysis').classList.remove('visible');
+    $('#sectionConclusion').style.display = 'none';
+    $('#sectionConclusion').classList.remove('visible');
+    progressPanel.classList.remove('active');
+    resetSteps();
+
+    btnAnalyze.disabled = true;
+    btnAnalyze.innerHTML = '<span class="spinner"></span> 分析中...';
+
+    try {
+      // Step 1: Load basic info, workpaper, and the independent frozen-model reference.
+      progressPanel.classList.add('active');
+      setStepState(1, 'active');
+
+      var mlRequest = fetch(API + '/api/ml?code=' + code + '&year=' + year, { signal: AbortSignal.timeout(120000) })
+        .then(async function(resp) {
+          var payload = await resp.json().catch(function() { return {}; });
+          if (!resp.ok) return { available: false, message: payload.error || '模型参考暂不可用' };
+          return payload;
+        })
+        .catch(function() { return { available: false, message: '暂时无法读取机器学习模型结果' }; });
+
+      var [basicResp, wpResp, mlData] = await Promise.all([
+        fetch(API + '/api/stock/basic_info?code=' + code + '&year=' + year, { signal: AbortSignal.timeout(30000) }),
+        fetch(API + '/api/workpaper?code=' + code + '&year=' + year, { signal: AbortSignal.timeout(120000) }),
+        mlRequest,
+      ]);
+
+      if (!basicResp.ok) {
+        var errData = await basicResp.json().catch(function() { return {}; });
+        throw new Error(errData.error || '获取基本信息失败');
+      }
+      if (!wpResp.ok) {
+        var errData2 = await wpResp.json().catch(function() { return {}; });
+        throw new Error(errData2.error || '生成工作底稿失败');
+      }
+
+      state.basicInfo = await basicResp.json();
+      state.workpaper = await wpResp.json();
+      state.mlResult = mlData;
+
+      setStepState(1, 'done');
+
+      // Render basic info and workpaper
+      renderBasicInfo(state.basicInfo);
+      renderWorkpaper(state.workpaper);
+      renderML(state.mlResult);
+
+      // Step 2: the backend runs prosecution, defense, and verdict sequentially
+      setStepState(2, 'active');
+
+      var analyzeResp = await fetch(API + '/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, year: year }),
+        signal: AbortSignal.timeout(900000),
+      });
+
+      if (!analyzeResp.ok) {
+        var errData3 = await analyzeResp.json().catch(function() { return {}; });
+        throw new Error(errData3.error || '三智能体分析失败');
+      }
+
+      state.analysisResult = await analyzeResp.json();
+      setStepState(2, 'done');
+
+      // Render analysis results
+      renderAnalysis(state.analysisResult);
+
+      progressPanel.classList.remove('active');
+      showToast('分析完成', 'success');
+
+    } catch (e) {
+      console.error('Analysis error:', e);
+      showToast('分析失败: ' + e.message, 'error');
+      progressPanel.classList.remove('active');
+    } finally {
+      btnAnalyze.disabled = false;
+      btnAnalyze.innerHTML = '<span>&#9654;</span> 开始分析';
+    }
+  }
+
+  // ── Render Basic Info ──
+  function renderBasicInfo(info) {
+    var headerHTML =
+      '<div class="company-header">' +
+        '<div class="info">' +
+          '<div>' +
+            '<div class="company-name">' + escHTML(info.company_name) + '</div>' +
+            '<div class="company-code">股票代码 ' + escHTML(info.stock_code) + '　·　' + escHTML(info.industry_name || '行业信息暂缺') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="meta-tags">' +
+          '<span class="tag">财务年度 ' + escHTML(info.year || '') + ' 年</span>' +
+          '<span class="tag">报告期 ' + escHTML(info.report_date || '暂缺') + '</span>' +
+        '</div>' +
+      '</div>';
+    $('#companyHeader').innerHTML = headerHTML;
+    showSection('sectionBasicInfo');
+  }
+
+  // ── Render Workpaper ──
+  function renderWorkpaper(wp) {
+    var b = wp.B_financial_metrics || {};
+    var c = wp.C_industry_benchmarks || {};
+    var d = wp.D_rule_hit_results || {};
+    var e = wp.E_governance_non_financial || {};
+    var f = wp.F_data_quality || {};
+    var info = state.basicInfo || {};
+    var html = '';
+    var total = Number(d.total_rules || 0);
+    var available = Number(d.available_rules || 0);
+    var unavailable = Number(d.unavailable_rules || 0);
+    var rules = Array.isArray(d.all_rules_detail) ? d.all_rules_detail : [];
+    var scale = b.scale_billion_yuan || {};
+    var ratios = b.reported_ratios || {};
+    var derived = b.derived_rule_metrics || {};
+    function metricCard(label, value, unit, percentRatio) {
+      var formatted = value === null || value === undefined ? '暂无数据' : percentRatio && typeof value === 'number' ? (value * 100).toFixed(2) + '%' : displayValue(value, 2) + (unit || '');
+      return '<div class="metric-card"><div class="label">' + escHTML(label) + '</div><div class="value">' + escHTML(formatted) + '</div></div>';
+    }
+
+    html += '<div class="wp-card wp-card-col-2"><h4>核心财务指标</h4><div class="metric-grid compact-metrics">';
+    html += metricCard('总资产', scale.total_assets, ' 亿元');
+    html += metricCard('营业收入', scale.operating_revenue, ' 亿元');
+    html += metricCard('净利润', scale.net_profit, ' 亿元');
+    html += metricCard('经营活动现金流量净额', scale.operating_cash_flow_net, ' 亿元');
+    html += metricCard('毛利率', derived.gross_margin_m !== undefined ? derived.gross_margin_m : ratios.gross_profit_margin, '', true);
+    html += metricCard('营业收入同比增速', derived.revenue_growth_m, '', true);
+    html += metricCard('净资产收益率', info.roe, '%');
+    html += '</div></div>';
+
+    html += '<div class="wp-card wp-card-col-2"><h4>治理与非财务指标</h4>';
+    var summary = e.summary || {};
+    var supply = e.supply_chain || {};
+    var ownership = e.ownership_risk || {};
+    var rawGovernance = e.raw_available_metrics || {};
+    var pledgeText = rawGovernance.pledge_high_risk === 1 ? '是' : rawGovernance.pledge_high_risk === 0 ? '否' : '暂无数据';
+    html += '<div class="metric-grid compact-metrics">';
+    html += metricCard('客户集中度', supply.customer_concentration, '%');
+    html += metricCard('供应商集中度', supply.supplier_concentration, '%');
+    html += metricCard('关联交易金额', (e.related_party_transaction || {}).amount_billion, ' 亿元');
+    html += metricCard('审计意见', (e.audit_quality || {}).opinion_desc, '');
+    html += metricCard('控股股东高比例质押', pledgeText, '');
+    html += '</div>';
+    if ((summary.risk_flags || []).length) {
+      html += '<div class="governance-flags">' + summary.risk_flags.map(function(flag) { return '<span>' + escHTML(flag) + '</span>'; }).join('') + '</div>';
+    } else {
+      html += '<div class="overview-note">' + escHTML(summary.note || '当前没有记录到治理关注信号。') + '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="wp-card wp-card-col-2"><h4>数据质量</h4>';
+    var counts = f.rule_status_counts || {};
+    var missingGovernance = (f.governance_missing_fields || []).length;
+    html += '<div class="metric-grid compact-metrics">';
+    html += metricCard('规则计算覆盖', available + ' / ' + total + ' 条', '');
+    html += metricCard('数据不足或计算异常', unavailable + ' 条', '');
+    html += metricCard('未提供的治理字段', missingGovernance + ' 项', '');
+    html += '</div><div class="overview-note">数据完整度会影响规则判断范围。</div></div>';
+
+    html += '<div class="wp-card wp-card-col-2"><h4>行业基准对照</h4>';
+    var benchmarkMetrics = c.metrics || {};
+    var sampleMetrics = {
+      revenue_growth_m: derived.revenue_growth_m,
+      gross_margin_m: derived.gross_margin_m,
+      inventory_to_assets_m: derived.inventory_to_assets_m,
+      cash_collection_ratio_m: derived.cash_collection_ratio_m
+    };
+    var benchmarkKeys = Object.keys(sampleMetrics);
+    html += '<div class="benchmark-list">';
+    benchmarkKeys.forEach(function(key) {
+      var benchmark = benchmarkMetrics[key] || {};
+      var formatBenchmark = function(value) {
+        if (value === null || value === undefined) return '暂无数据';
+        return typeof value === 'number' ? (value * 100).toFixed(2) + '%' : displayValue(value, 2);
+      };
+      var meta = (c.source_metadata || {})[key] || {};
+      var level = { subindustry: '细分行业', level1: '上级行业', market: '全市场' }[meta.industry_level] || '';
+      html += '<div class="benchmark-item"><div class="label">' + escHTML(labelForMetric(key)) + '</div>';
+      html += '<div class="value">本公司 ' + escHTML(formatBenchmark(sampleMetrics[key])) + '</div>';
+      html += '<div class="text-xs text-muted">行业中位数 ' + escHTML(formatBenchmark(benchmark.median)) + '；第25—75分位区间：' + escHTML(formatBenchmark(benchmark.p25)) + '—' + escHTML(formatBenchmark(benchmark.p75)) + (level ? '（' + escHTML(level) + '）' : '') + '</div></div>';
+    });
+    html += '</div><div class="overview-note">行业阈值按年度样本计算，并按细分行业、上级行业、全市场顺序匹配。</div></div>';
+
+    html += '<div class="wp-card wp-card-col-4"><h4>规则命中情况</h4>';
+    var hitRules = rules.filter(function(rule) { return Number(rule.rule_hit) === 1; });
+    html += '<div class="text-sm text-muted" style="margin-bottom:12px;">共命中 ' + hitRules.length + ' 条规则</div>';
+    if (hitRules.length) {
+      html += '<div class="hit-rule-list">' + hitRules.map(function(rule) {
+        return '<div class="hit-rule-detail"><div class="hit-rule-header"><span class="hit-rule-id">' + escHTML(rule.rule_id) + '</span><span class="hit-rule-name">' + escHTML(rule.rule_name || labelForMetric(String(rule.rule_id || '').replace(/-/g, '_'))) + '</span></div><div class="hit-rule-condition">' + ruleHitEvidence(rule) + '</div></div>';
+      }).join('') + '</div>';
+    } else {
+      html += '<div class="text-sm text-muted">当前年度没有规则命中。</div>';
+    }
+    html += '</div>';
+
+    $('#wpOverview').innerHTML = html;
+    showSection('sectionBasicInfo');
+  }
+
+  // ── Render independent frozen-model result ──
+  function renderML(result) {
+    var root = $('#mlOverview');
+    if (!result || !result.available) {
+      root.innerHTML = '<div class="ml-unavailable">当前公司年度暂无可用的冻结模型结果。</div>';
+      showSection('sectionML');
+      return;
+    }
+
+    var score = Number(result.ml_probability);
+    var threshold = Number(result.classification_threshold);
+    var prediction = Number(result.ml_prediction) === 1;
+    var modelName = { GradientBoosting: '梯度提升树' }[result.model] || '已训练分类模型';
+    var scoreText = Number.isFinite(score) ? score.toFixed(4) : '暂无数据';
+    var thresholdText = Number.isFinite(threshold) ? threshold.toFixed(4) : '暂无数据';
+    var barWidth = Number.isFinite(score) ? Math.max(0, Math.min(100, score * 100)) : 0;
+    var features = Array.isArray(result.shap_values) ? result.shap_values.slice(0, 8) : [];
+    var maxImpact = features.reduce(function(max, item) { return Math.max(max, Math.abs(Number(item.shap_value) || 0)); }, 0) || 1;
+    var html = '<div class="ml-overview">';
+    html += '<div class="ml-card"><div class="ml-score-display">';
+    html += '<div class="score-value" style="color:' + (prediction ? 'var(--danger)' : 'var(--success)') + ';">' + escHTML(scoreText) + '</div>';
+    html += '<div class="score-label">模型得分</div>';
+    html += '<span class="risk-badge ' + (prediction ? 'risk-high' : 'risk-low') + '">' + (prediction ? '达到预警阈值' : '未达到预警阈值') + '</span>';
+    html += '</div><div class="overview-note">模型：' + escHTML(modelName) + '；分类阈值：' + escHTML(thresholdText) + '；输入特征：' + escHTML(displayValue(result.feature_count, 0)) + ' 项</div>';
+    html += '<div class="ml-feature-track" style="height:10px;margin-top:14px;"><div class="ml-feature-bar ' + (prediction ? 'positive' : 'negative') + '" style="width:' + barWidth + '%;"></div></div>';
+    html += '</div>';
+
+    html += '<div class="ml-card"><h4>对模型结果影响较大的特征</h4>';
+    if (features.length) {
+      html += '<div class="ml-feature-list">' + features.map(function(item) {
+        var impact = Number(item.shap_value) || 0;
+        var positive = impact >= 0;
+        var width = Math.max(2, Math.abs(impact) / maxImpact * 100);
+        var direction = positive ? '推高模型分值' : '拉低模型分值';
+        return '<div class="ml-feature-item"><span class="ml-feature-name" title="' + escHTML(direction) + '">' + escHTML(labelForMetric(item.feature)) + '</span>' +
+          '<span class="ml-feature-track"><span class="ml-feature-bar ' + (positive ? 'positive' : 'negative') + '" style="display:block;width:' + width + '%;"></span></span>' +
+          '<span class="ml-feature-value">' + (positive ? '+' : '') + escHTML(displayValue(impact, 5)) + '</span></div>';
+      }).join('') + '</div>';
+    } else {
+      html += '<div class="overview-note">暂无可展示的特征贡献解释。</div>';
+    }
+    html += '<div class="overview-note">特征贡献展示各项指标对本次模型分值的影响方向。</div></div></div>';
+    root.innerHTML = html;
+    showSection('sectionML');
+  }
+
+  function riskLevelColor(level) {
+    if (level === '低风险' || level === '低') return 'var(--success)';
+    if (level === '中风险' || level === '中') return 'var(--warning)';
+    if (level === '中高风险') return 'var(--orange)';
+    if (level === '高风险' || level === '高') return 'var(--danger)';
+    return 'var(--text-muted)';
+  }
+
+  function fmtPct(v) {
+    if (v === null || v === undefined) return '暂无数据';
+    return (v * 100).toFixed(2) + '%';
+  }
+
+  function fmtNum(v) {
+    if (v === null || v === undefined) return '暂无数据';
+    if (typeof v === 'number') return v.toFixed(4);
+    return v;
+  }
+
+  // ── Render Analysis ──
+  function renderAnalysis(result) {
+    if (!result || !result.success) {
+      showToast('分析结果异常', 'error');
+      return;
+    }
+
+    var pros = result.prosecution || {};
+    var defe = result.defense || {};
+    var verd = result.verdict || {};
+    renderTabProsecution(pros);
+    renderTabDefense(defe, pros);
+    renderTabVerdict(verd);
+    renderTabOverall(verd, pros);
+    renderTabAdvice(verd, pros, defe);
+
+    showSection('sectionAnalysis');
+    showSection('sectionConclusion');
+  }
+
+  // Tab 1: Overall Risk
+  function renderTabOverall(verd, pros) {
+    var html = '';
+    var confirmed = verd.confirmed_risks || [];
+    var rejected = verd.rejected_risks || [];
+    var watchlist = verd.watchlist_items || [];
+
+    html += '<div style="text-align:center;margin-bottom:24px;">';
+    html += '<div class="text-sm text-muted mb-2">总体财务舞弊风险（裁决结果）</div>';
+    html += riskBadgeHTML(verd.final_risk_level, true);
+    html += '</div>';
+
+    html += '<div class="overall-risk-grid">';
+    html += '<div class="overall-risk-item"><div class="or-label">采纳风险点</div><div class="or-value">' + confirmed.length + ' 项</div></div>';
+    html += '<div class="overall-risk-item"><div class="or-label">驳回风险点</div><div class="or-value">' + rejected.length + ' 项</div></div>';
+    html += '<div class="overall-risk-item"><div class="or-label">保留关注</div><div class="or-value">' + watchlist.length + ' 项</div></div>';
+    html += '<div class="overall-risk-item"><div class="or-label">指控方初步判断</div><div class="or-value">' + riskBadgeHTML(pros.risk_level) + '</div></div>';
+    html += '</div>';
+
+    if (verd.verdict_summary) {
+      html += '<div class="summary-text">' + escHTML(verd.verdict_summary) + '</div>';
+    }
+    $('#tabOverall').innerHTML = html;
+  }
+
+  // Tab 2: Prosecution
+  function renderTabProsecution(pros) {
+    var html = '';
+    html += '<div class="result-card">';
+    html += '<div class="rc-header">';
+    html += '<span style="font-size:15px;font-weight:600;">总体风险初步判断</span>';
+    html += riskBadgeHTML(pros.risk_level);
+    html += '<span class="text-sm text-muted">判断把握：' + escHTML(chineseEnum(pros.confidence)) + '</span>';
+    html += '</div>';
+    html += '<div class="text-sm text-muted">初步等级仅用于风险筛查，最终结论以裁决智能体结果为准。</div></div>';
+
+    var accusations = pros.main_accusations || [];
+    html += '<div class="result-card"><div class="rc-header"><span style="font-size:15px;font-weight:600;">主要指控与疑点</span><span class="text-sm text-muted">' + accusations.length + ' 项</span></div>';
+    if (accusations.length > 0) {
+      accusations.forEach(function(acc) {
+        html += renderAccusationCard(acc);
+      });
+    } else {
+      html += '<div class="text-sm text-muted">未发现主要指控点</div>';
+    }
+    html += '</div>';
+
+    // Attention items
+    var attn = pros.attention_items || [];
+    if (attn.length > 0) {
+      html += '<div class="advice-section"><h4>&#128065; 关注事项</h4><ul>';
+      attn.forEach(function(item) {
+        html += '<li>' + escHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Data limitations
+    var dlim = pros.data_limitations || [];
+    if (dlim.length > 0) {
+      html += '<div class="advice-section"><h4>&#9888;&#65039; 数据局限</h4><ul>';
+      dlim.forEach(function(item) {
+        html += '<li>' + escHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    $('#tabProsecution').innerHTML = html;
+  }
+
+  function renderAccusationCard(acc) {
+    var html = '<div style="padding:14px;margin:10px 0;background:rgba(15,23,42,0.4);border-radius:8px;border:1px solid var(--border);">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">';
+    html += '<span class="rc-id">' + escHTML(accusationLabel(acc.accusation_id)) + '</span>';
+    html += '<span style="font-size:14px;font-weight:600;flex:1;">' + escHTML(acc.risk_point || '') + '</span>';
+    html += strengthBadgeHTML(acc.strength);
+    html += '</div>';
+
+    if (acc.related_rules && acc.related_rules.length > 0) {
+      html += '<p><span class="field-label">相关规则:</span>';
+      acc.related_rules.forEach(function(r) { html += '<span class="evidence-tag">' + escHTML(ruleLabel(r)) + '</span>'; });
+      html += '</p>';
+    }
+    if (acc.related_indicators && acc.related_indicators.length > 0) {
+      html += '<p><span class="field-label">相关指标:</span>';
+      acc.related_indicators.forEach(function(r) { html += '<span class="evidence-tag">' + escHTML(labelForMetric(r)) + '</span>'; });
+      html += '</p>';
+    }
+    if (acc.evidence) {
+      html += '<p><span class="field-label">证据:</span>' + escHTML(acc.evidence) + '</p>';
+    }
+    if (acc.fraud_meaning) {
+      html += '<p><span class="field-label">舞弊含义:</span><span style="color:var(--warning);">' + escHTML(acc.fraud_meaning) + '</span></p>';
+    }
+    if (acc.risk_type) html += '<p><span class="field-label">风险类别:</span>' + escHTML(chineseEnum(acc.risk_type)) + '</p>';
+    html += '</div>';
+    return html;
+  }
+
+  // Tab 3: Defense
+  function renderTabDefense(defe, pros) {
+    var html = '';
+    var results = defe.defense_results || [];
+
+    if (results.length === 0) {
+      html += '<div class="text-sm text-muted" style="text-align:center;padding:40px;">无辩护条目</div>';
+    } else {
+      results.forEach(function(dr) {
+        html += '<div class="result-card">';
+        html += '<div class="rc-header">';
+        html += '<span class="rc-id">' + escHTML(accusationLabel(dr.target_accusation_id)) + '</span>';
+        html += '<span class="rc-title">' + escHTML(dr.original_risk_point || '') + '</span>';
+        html += strengthBadgeHTML(dr.defense_strength);
+        html += '</div>';
+
+        // Adjustment suggestion
+        if (dr.suggested_adjustment) {
+          html += '<p class="text-sm mb-2"><span class="field-label">调整建议:</span>' + escHTML(chineseEnum(dr.suggested_adjustment)) + '</p>';
+        }
+
+        // Defense reasons
+        var reasons = dr.defense_reasons || [];
+        reasons.forEach(function(r) {
+          var evAvailable = r.evidence_available;
+          html += '<div class="defense-reason">';
+          html += '<div class="dr-type">' + escHTML(chineseEnum(r.reason_type)) + '</div>';
+          html += '<div class="dr-text">' + escHTML(r.reason || '') + '</div>';
+          if (r.supporting_evidence) {
+            html += '<div class="dr-evidence ' + (evAvailable ? 'has-ev' : 'no-ev') + '">';
+            html += (evAvailable ? '&#10003; 有证据: ' : '&#10007; 无底稿证据: ');
+            html += escHTML(r.supporting_evidence) + '</div>';
+          }
+          html += '</div>';
+        });
+
+        // Remaining concerns
+        var concerns = dr.remaining_concerns || [];
+        if (concerns.length > 0) {
+          html += '<div class="mt-2"><span class="field-label">仍存疑点:</span>';
+          concerns.forEach(function(c) {
+            html += '<span class="text-sm" style="color:var(--warning);margin-right:8px;">' + escHTML(typeof c === 'string' ? c : JSON.stringify(c)) + '</span>';
+          });
+          html += '</div>';
+        }
+
+        // Defense summary
+        if (dr.defense_summary) {
+          html += '<div class="divider"></div>';
+          html += '<p class="text-sm text-muted"><span class="field-label">辩护总结:</span>' + escHTML(dr.defense_summary) + '</p>';
+        }
+
+        html += '</div>';
+      });
+    }
+
+    // Overall defense
+    var od = defe.overall_defense || {};
+    if (od.main_defense_points || od.unresolved_risks || od.data_limitations) {
+      html += '<div class="summary-text">';
+      if (od.main_defense_points && od.main_defense_points.length > 0) {
+        html += '<div class="fw-bold mb-2">主要辩护论点:</div>';
+        od.main_defense_points.forEach(function(pt) {
+          html += '<div class="text-sm mb-2">- ' + escHTML(typeof pt === 'string' ? pt : JSON.stringify(pt)) + '</div>';
+        });
+      }
+      if (od.unresolved_risks && od.unresolved_risks.length > 0) {
+        html += '<div class="divider"></div>';
+        html += '<div class="fw-bold mb-2" style="color:var(--warning);">未化解风险:</div>';
+        od.unresolved_risks.forEach(function(ur) {
+          html += '<div class="text-sm mb-2" style="color:var(--warning);">- ' + escHTML(typeof ur === 'string' ? ur : JSON.stringify(ur)) + '</div>';
+        });
+      }
+      if (od.data_limitations && od.data_limitations.length > 0) {
+        html += '<div class="divider"></div>';
+        html += '<div class="fw-bold mb-2">辩护侧数据局限:</div>';
+        od.data_limitations.forEach(function(item) {
+          html += '<div class="text-sm mb-2">- ' + escHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</div>';
+        });
+      }
+      html += '</div>';
+    }
+
+    $('#tabDefense').innerHTML = html;
+  }
+
+  // Tab 4: Verdict
+  function renderTabVerdict(verd) {
+    var html = '';
+
+    // Final risk level
+    html += '<div style="text-align:center;margin-bottom:24px;">';
+    html += '<div class="text-sm text-muted mb-2">裁决结果 - 最终风险等级</div>';
+    html += riskBadgeHTML(verd.final_risk_level, true);
+    html += '</div>';
+
+    // Confirmed risks
+    var confirmed = verd.confirmed_risks || [];
+    if (confirmed.length > 0) {
+      html += '<h4 style="margin-bottom:12px;color:var(--success);">&#10003; 采纳风险点 (' + confirmed.length + ')</h4>';
+      confirmed.forEach(function(cr) {
+        html += '<div class="verdict-item confirmed">';
+        html += '<div class="vi-icon" style="color:var(--success);">&#10003;</div>';
+        html += '<div class="vi-content">';
+        html += '<div class="vi-type text-success">已采纳</div>';
+        html += '<div class="vi-text">' + escHTML(cr.risk_point || '') + '</div>';
+        if (cr.basis) html += '<div class="vi-reason">依据: ' + escHTML(cr.basis) + '</div>';
+        if (cr.accepted_reason) html += '<div class="vi-reason">采纳原因: ' + escHTML(cr.accepted_reason) + '</div>';
+        html += '</div></div>';
+      });
+    }
+
+    // Rejected risks
+    var rejected = verd.rejected_risks || [];
+    if (rejected.length > 0) {
+      html += '<h4 style="margin:20px 0 12px;color:var(--danger);">&#10007; 驳回风险点 (' + rejected.length + ')</h4>';
+      rejected.forEach(function(rr) {
+        html += '<div class="verdict-item rejected">';
+        html += '<div class="vi-icon" style="color:var(--danger);">&#10007;</div>';
+        html += '<div class="vi-content">';
+        html += '<div class="vi-type text-danger">已驳回</div>';
+        html += '<div class="vi-text">' + escHTML(rr.risk_point || '') + '</div>';
+        if (rr.rejected_reason) html += '<div class="vi-reason">驳回原因: ' + escHTML(rr.rejected_reason) + '</div>';
+        html += '</div></div>';
+      });
+    }
+
+    // Watchlist
+    var watchlist = verd.watchlist_items || [];
+    if (watchlist.length > 0) {
+      html += '<h4 style="margin:20px 0 12px;color:var(--warning);">&#128308; 保留关注 (' + watchlist.length + ')</h4>';
+      watchlist.forEach(function(wi) {
+        html += '<div class="verdict-item watchlist">';
+        html += '<div class="vi-icon" style="color:var(--warning);">&#128308;</div>';
+        html += '<div class="vi-content">';
+        html += '<div class="vi-type text-warning">待进一步核查</div>';
+        html += '<div class="vi-text">' + escHTML(wi.reason || wi.risk_point || '') + '</div>';
+        if (wi.required_additional_data) html += '<div class="vi-reason">需补充数据: ' + escHTML(wi.required_additional_data) + '</div>';
+        html += '</div></div>';
+      });
+    }
+
+    // Evidence chain
+    var evChain = verd.evidence_chain || [];
+    if (evChain.length > 0) {
+      html += '<h4 style="margin:24px 0 12px;">&#128279; 核心证据链</h4>';
+      evChain.forEach(function(ev) {
+        html += '<div class="evidence-chain-item">';
+        html += '<div class="ec-header">';
+        html += '<span class="text-sm fw-bold">证据链 ' + (evChain.indexOf(ev) + 1) + '</span>';
+        html += strengthBadgeHTML(ev.strength);
+        html += '</div>';
+        html += '<div class="ec-summary">' + escHTML(ev.evidence_summary || '') + '</div>';
+        var rules = ev.related_rules || [];
+        var indic = ev.related_indicators || [];
+        if (rules.length > 0) {
+          html += '<div class="ec-rules">规则: ' + rules.map(function(r) { return '<span class="evidence-tag">' + escHTML(ruleLabel(r)) + '</span>'; }).join('') + '</div>';
+        }
+        if (indic.length > 0) {
+          html += '<div class="ec-rules">指标: ' + indic.map(function(r) { return '<span class="evidence-tag">' + escHTML(labelForMetric(r)) + '</span>'; }).join('') + '</div>';
+        }
+        html += '</div>';
+      });
+    }
+
+    // Minority opinions
+    var minority = verd.minority_opinions || [];
+    if (minority.length > 0) {
+      html += '<div class="advice-section mt-4"><h4>&#9888;&#65039; 少数意见</h4><ul>';
+      minority.forEach(function(m) {
+        html += '<li>' + escHTML(typeof m === 'string' ? m : JSON.stringify(m)) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Audit suggestions
+    var suggestions = verd.audit_suggestions || [];
+    if (suggestions.length > 0) {
+      html += '<div class="advice-section mt-4"><h4>&#128221; 核查建议</h4><ul>';
+      suggestions.forEach(function(sg) {
+        var priCls = priorityClass(sg.priority);
+        html += '<li><span class="risk-badge ' + priCls + '" style="margin-right:8px;">' + escHTML(chineseEnum(sg.priority)) + '</span>' + escHTML(sg.suggestion || '') + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Verdict summary
+    if (verd.verdict_summary) {
+      html += '<div class="summary-text mt-4">' + escHTML(verd.verdict_summary) + '</div>';
+    }
+
+    $('#tabVerdict').innerHTML = html;
+  }
+
+  // Tab 5: Follow-up checks
+  function renderTabAdvice(verd, pros, defe) {
+    var html = '';
+    var level = verd.final_risk_level || '暂无结论';
+    var confirmed = (verd.confirmed_risks || []).length;
+    var watchlist = (verd.watchlist_items || []).length;
+    var adviceText = verd.verdict_summary || '请结合已采纳风险、待核查事项及底稿数据质量开展人工复核。';
+
+    html += '<div class="advice-section">';
+    html += '<h4>&#128221; 核查结论摘要</h4>';
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+    html += '<span style="font-size:14px;color:var(--text-muted);">总体风险等级:</span>';
+    html += riskBadgeHTML(level);
+    html += '</div>';
+    html += '<p style="font-size:15px;line-height:1.8;color:var(--text-primary);">' + escHTML(adviceText) + '</p>';
+    html += '</div>';
+
+    // Risk warnings
+    html += '<div class="advice-section">';
+    html += '<h4>&#9888;&#65039; 风险提示</h4><ul>';
+    if (confirmed > 0) {
+      html += '<li>裁决智能体采纳了 <strong>' + confirmed + '</strong> 项风险线索，仍需结合底稿和补充材料核验</li>';
+    }
+    if (watchlist > 0) {
+      html += '<li>有 <strong>' + watchlist + '</strong> 个风险点被列入保留关注，需要进一步核查确认</li>';
+    }
+    // Add minority opinions as risk
+    var minority = verd.minority_opinions || [];
+    if (minority.length > 0) {
+      html += '<li>裁决过程中存在 <strong>' + minority.length + '</strong> 条少数意见，表明部分风险尚存争议</li>';
+    }
+    html += '</ul></div>';
+
+    var suggestions = verd.audit_suggestions || [];
+    if (suggestions.length > 0) {
+      html += '<div class="advice-section">';
+      html += '<h4>&#128270; 建议的核查行动</h4><ul>';
+      // Sort by priority
+      var sorted = suggestions.slice().sort(function(a, b) {
+        var order = { '高': 0, '中': 1, '低': 2 };
+        var aOrder = order[a.priority] === undefined ? 2 : order[a.priority];
+        var bOrder = order[b.priority] === undefined ? 2 : order[b.priority];
+        return aOrder - bOrder;
+      });
+      sorted.forEach(function(sg) {
+        var priCls = priorityClass(sg.priority);
+        html += '<li><span class="risk-badge ' + priCls + '" style="margin-right:8px;">' + escHTML(chineseEnum(sg.priority)) + '优先</span>' + escHTML(sg.suggestion || '') + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    $('#tabAdvice').innerHTML = html;
+  }
+
+  // ── Tab Switching (scoped to parent .tabs-container) ──
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    var tabId = btn.getAttribute('data-tab');
+    if (!tabId) return;
+
+    // Only toggle tabs within the same container
+    var container = btn.closest('.tabs-container');
+    if (container) {
+      container.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      container.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    }
+    btn.classList.add('active');
+    var tabEl = document.getElementById(tabId);
+    if (tabEl) tabEl.classList.add('active');
+  });
+
+  // ── Keyboard shortcut ──
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var firstItem = searchDropdown.querySelector('.dd-item');
+      if (firstItem) {
+        firstItem.click();
+      }
+    }
+  });
+
+  // ── Check API status ──
+  fetch(API + '/api/stock/search?q=' + encodeURIComponent('测试'), { signal: AbortSignal.timeout(3000) })
+    .then(function(resp) {
+      if (resp.ok) {
+        $('#apiStatus').textContent = '服务已连接';
+      } else {
+        $('#apiStatus').textContent = '服务异常';
+      }
+    })
+    .catch(function() {
+      $('#apiStatus').textContent = '服务未连接';
+      showToast('无法连接到本地服务（localhost:5001），请确认后端已启动', 'error');
+    });
+
+})();
+</script>
+</body>
+</html>
